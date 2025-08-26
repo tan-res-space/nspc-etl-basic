@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>NSPC_ETL_Architecture_Document.md</title>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+
+<style>
+/* https://github.com/microsoft/vscode/blob/master/extensions/markdown-language-features/media/markdown.css */
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+body {
+	font-family: var(--vscode-markdown-font-family, -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif);
+	font-size: var(--vscode-markdown-font-size, 14px);
+	padding: 0 26px;
+	line-height: var(--vscode-markdown-line-height, 22px);
+	word-wrap: break-word;
+}
+
+#code-csp-warning {
+	position: fixed;
+	top: 0;
+	right: 0;
+	color: white;
+	margin: 16px;
+	text-align: center;
+	font-size: 12px;
+	font-family: sans-serif;
+	background-color:#444444;
+	cursor: pointer;
+	padding: 6px;
+	box-shadow: 1px 1px 1px rgba(0,0,0,.25);
+}
+
+#code-csp-warning:hover {
+	text-decoration: none;
+	background-color:#007acc;
+	box-shadow: 2px 2px 2px rgba(0,0,0,.25);
+}
+
+body.scrollBeyondLastLine {
+	margin-bottom: calc(100vh - 22px);
+}
+
+body.showEditorSelection .code-line {
+	position: relative;
+}
+
+body.showEditorSelection .code-active-line:before,
+body.showEditorSelection .code-line:hover:before {
+	content: "";
+	display: block;
+	position: absolute;
+	top: 0;
+	left: -12px;
+	height: 100%;
+}
+
+body.showEditorSelection li.code-active-line:before,
+body.showEditorSelection li.code-line:hover:before {
+	left: -30px;
+}
+
+.vscode-light.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.15);
+}
+
+.vscode-light.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.40);
+}
+
+.vscode-light.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-dark.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.4);
+}
+
+.vscode-dark.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.60);
+}
+
+.vscode-dark.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-high-contrast.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 160, 0, 0.7);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 160, 0, 1);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+img {
+	max-width: 100%;
+	max-height: 100%;
+}
+
+a {
+	text-decoration: none;
+}
+
+a:hover {
+	text-decoration: underline;
+}
+
+a:focus,
+input:focus,
+select:focus,
+textarea:focus {
+	outline: 1px solid -webkit-focus-ring-color;
+	outline-offset: -1px;
+}
+
+hr {
+	border: 0;
+	height: 2px;
+	border-bottom: 2px solid;
+}
+
+h1 {
+	padding-bottom: 0.3em;
+	line-height: 1.2;
+	border-bottom-width: 1px;
+	border-bottom-style: solid;
+}
+
+h1, h2, h3 {
+	font-weight: normal;
+}
+
+table {
+	border-collapse: collapse;
+}
+
+table > thead > tr > th {
+	text-align: left;
+	border-bottom: 1px solid;
+}
+
+table > thead > tr > th,
+table > thead > tr > td,
+table > tbody > tr > th,
+table > tbody > tr > td {
+	padding: 5px 10px;
+}
+
+table > tbody > tr + tr > td {
+	border-top: 1px solid;
+}
+
+blockquote {
+	margin: 0 7px 0 5px;
+	padding: 0 16px 0 10px;
+	border-left-width: 5px;
+	border-left-style: solid;
+}
+
+code {
+	font-family: Menlo, Monaco, Consolas, "Droid Sans Mono", "Courier New", monospace, "Droid Sans Fallback";
+	font-size: 1em;
+	line-height: 1.357em;
+}
+
+body.wordWrap pre {
+	white-space: pre-wrap;
+}
+
+pre:not(.hljs),
+pre.hljs code > div {
+	padding: 16px;
+	border-radius: 3px;
+	overflow: auto;
+}
+
+pre code {
+	color: var(--vscode-editor-foreground);
+	tab-size: 4;
+}
+
+/** Theming */
+
+.vscode-light pre {
+	background-color: rgba(220, 220, 220, 0.4);
+}
+
+.vscode-dark pre {
+	background-color: rgba(10, 10, 10, 0.4);
+}
+
+.vscode-high-contrast pre {
+	background-color: rgb(0, 0, 0);
+}
+
+.vscode-high-contrast h1 {
+	border-color: rgb(0, 0, 0);
+}
+
+.vscode-light table > thead > tr > th {
+	border-color: rgba(0, 0, 0, 0.69);
+}
+
+.vscode-dark table > thead > tr > th {
+	border-color: rgba(255, 255, 255, 0.69);
+}
+
+.vscode-light h1,
+.vscode-light hr,
+.vscode-light table > tbody > tr + tr > td {
+	border-color: rgba(0, 0, 0, 0.18);
+}
+
+.vscode-dark h1,
+.vscode-dark hr,
+.vscode-dark table > tbody > tr + tr > td {
+	border-color: rgba(255, 255, 255, 0.18);
+}
+
+</style>
+
+<style>
+/* Tomorrow Theme */
+/* http://jmblog.github.com/color-themes-for-google-code-highlightjs */
+/* Original theme - https://github.com/chriskempson/tomorrow-theme */
+
+/* Tomorrow Comment */
+.hljs-comment,
+.hljs-quote {
+	color: #8e908c;
+}
+
+/* Tomorrow Red */
+.hljs-variable,
+.hljs-template-variable,
+.hljs-tag,
+.hljs-name,
+.hljs-selector-id,
+.hljs-selector-class,
+.hljs-regexp,
+.hljs-deletion {
+	color: #c82829;
+}
+
+/* Tomorrow Orange */
+.hljs-number,
+.hljs-built_in,
+.hljs-builtin-name,
+.hljs-literal,
+.hljs-type,
+.hljs-params,
+.hljs-meta,
+.hljs-link {
+	color: #f5871f;
+}
+
+/* Tomorrow Yellow */
+.hljs-attribute {
+	color: #eab700;
+}
+
+/* Tomorrow Green */
+.hljs-string,
+.hljs-symbol,
+.hljs-bullet,
+.hljs-addition {
+	color: #718c00;
+}
+
+/* Tomorrow Blue */
+.hljs-title,
+.hljs-section {
+	color: #4271ae;
+}
+
+/* Tomorrow Purple */
+.hljs-keyword,
+.hljs-selector-tag {
+	color: #8959a8;
+}
+
+.hljs {
+	display: block;
+	overflow-x: auto;
+	color: #4d4d4c;
+	padding: 0.5em;
+}
+
+.hljs-emphasis {
+	font-style: italic;
+}
+
+.hljs-strong {
+	font-weight: bold;
+}
+</style>
+
+<style>
+/*
+ * Markdown PDF CSS
+ */
+
+ body {
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif, "Meiryo";
+	padding: 0 12px;
+}
+
+pre {
+	background-color: #f8f8f8;
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	overflow-x: auto;
+	white-space: pre-wrap;
+	overflow-wrap: break-word;
+}
+
+pre:not(.hljs) {
+	padding: 23px;
+	line-height: 19px;
+}
+
+blockquote {
+	background: rgba(127, 127, 127, 0.1);
+	border-color: rgba(0, 122, 204, 0.5);
+}
+
+.emoji {
+	height: 1.4em;
+}
+
+code {
+	font-size: 14px;
+	line-height: 19px;
+}
+
+/* for inline code */
+:not(pre):not(.hljs) > code {
+	color: #C9AE75; /* Change the old color so it seems less like an error */
+	font-size: inherit;
+}
+
+/* Page Break : use <div class="page"/> to insert page break
+-------------------------------------------------------- */
+.page {
+	page-break-after: always;
+}
+
+</style>
+
+<script src="https://unpkg.com/mermaid/dist/mermaid.min.js"></script>
+</head>
+<body>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: document.body.classList.contains('vscode-dark') || document.body.classList.contains('vscode-high-contrast')
+          ? 'dark'
+          : 'default'
+    });
+  </script>
+<h1 id="nspc-etl-system-architecture-document">NSPC ETL System Architecture Document</h1>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ol>
+<li><a href="#system-overview">System Overview</a></li>
+<li><a href="#code-analysis">Code Analysis</a></li>
+<li><a href="#data-flow-architecture">Data Flow Architecture</a></li>
+<li><a href="#technical-specifications">Technical Specifications</a></li>
+<li><a href="#visual-documentation">Visual Documentation</a></li>
+<li><a href="#component-interactions">Component Interactions</a></li>
+<li><a href="#configuration-management">Configuration Management</a></li>
+<li><a href="#error-handling-and-monitoring">Error Handling and Monitoring</a></li>
+<li><a href="#deployment-and-operations">Deployment and Operations</a></li>
+</ol>
+<h2 id="system-overview">System Overview</h2>
+<p>The <strong>NSPC ETL System</strong> is a comprehensive file-to-database loading solution designed to process various file formats (CSV, PSV, JSON) and load them into SQL Server databases. The system features automatic schema inference, robust error handling, batch processing capabilities, and comprehensive logging and monitoring.</p>
+<h3 id="key-features">Key Features</h3>
+<ul>
+<li><strong>Multi-format Support</strong>: Handles CSV, PSV (pipe-separated values), and JSON files</li>
+<li><strong>Automatic Schema Inference</strong>: Dynamically analyzes file structure and generates appropriate SQL DDL</li>
+<li><strong>Batch Processing</strong>: Supports both single file and directory-based batch processing with checkpointing</li>
+<li><strong>Error Handling</strong>: Configurable transaction modes (strict/tolerant) with detailed error logging</li>
+<li><strong>Monitoring</strong>: Comprehensive job statistics and error tracking</li>
+<li><strong>Environment Management</strong>: Automated Python virtual environment setup and dependency management</li>
+</ul>
+<h3 id="system-purpose">System Purpose</h3>
+<p>The ETL system serves as a bridge between various data sources and SQL Server databases, providing:</p>
+<ul>
+<li>Automated data ingestion from multiple file formats</li>
+<li>Dynamic table creation based on data structure</li>
+<li>Robust error handling and recovery mechanisms</li>
+<li>Comprehensive audit trails and monitoring capabilities</li>
+<li>Scalable batch processing for large datasets</li>
+</ul>
+<h2 id="code-analysis">Code Analysis</h2>
+<h3 id="main-python-script-srcfile-to-sql-loaderpy">Main Python Script (<code>src/file-to-sql-loader.py</code>)</h3>
+<h4 id="core-classes-and-components">Core Classes and Components</h4>
+<p><strong>FileToSQLLoader Class</strong></p>
+<pre class="hljs"><code><div><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">FileToSQLLoader</span>:</span>
+    <span class="hljs-string">"""Main class for processing files and loading into SQL Server."""</span>
+    
+    <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">__init__</span><span class="hljs-params">(self, config: Dict[str, Any], batch_job_id: Optional[str] = None)</span>:</span>
+        self.config = config
+        self.batch_job_id = batch_job_id
+        self.connection = <span class="hljs-literal">None</span>
+        self.table_name = <span class="hljs-literal">None</span>
+        self.columns_info = {}
+        self.total_rows = <span class="hljs-number">0</span>
+        self.processed_rows = <span class="hljs-number">0</span>
+        self.error_rows = <span class="hljs-number">0</span>
+</div></code></pre>
+<p><strong>Responsibilities:</strong></p>
+<ul>
+<li><strong>Schema Analysis</strong>: Analyzes DataFrame structure to infer column types and constraints</li>
+<li><strong>DDL Generation</strong>: Creates SQL Server table definitions based on inferred schema</li>
+<li><strong>Data Loading</strong>: Handles data insertion with configurable transaction semantics</li>
+<li><strong>Error Management</strong>: Tracks and logs processing errors with configurable thresholds</li>
+<li><strong>Statistics Tracking</strong>: Records job execution metrics and performance data</li>
+</ul>
+<p><strong>BatchJobManager Class</strong></p>
+<pre class="hljs"><code><div><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">BatchJobManager</span>:</span>
+    <span class="hljs-string">"""Manages batch job lifecycle and checkpointing."""</span>
+    
+    <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">__init__</span><span class="hljs-params">(self, config: Dict[str, Any], directory_path: str, connection)</span>:</span>
+        self.config = config
+        self.directory_path = directory_path
+        self.connection = connection
+</div></code></pre>
+<p><strong>Responsibilities:</strong></p>
+<ul>
+<li><strong>Checkpointing</strong>: Manages batch job state and enables resumption of interrupted processes</li>
+<li><strong>File Tracking</strong>: Maintains records of processed and pending files</li>
+<li><strong>Batch Statistics</strong>: Tracks overall batch processing metrics and status</li>
+</ul>
+<h4 id="key-functions">Key Functions</h4>
+<p><strong>File Type Detection:</strong></p>
+<ul>
+<li>Automatically detects CSV, PSV, and JSON formats by analyzing file content</li>
+<li>Uses pattern matching and structural analysis for accurate identification</li>
+<li>Handles edge cases and malformed files gracefully</li>
+</ul>
+<p><strong>Schema Inference:</strong></p>
+<ul>
+<li>Analyzes pandas DataFrame to understand column characteristics</li>
+<li>Infers appropriate SQL Server data types (INT, DECIMAL, NVARCHAR, DATETIME2)</li>
+<li>Calculates optimal column lengths with configurable overrides</li>
+<li>Handles NULL values and data type conflicts</li>
+</ul>
+<p><strong>Data Loading Strategies:</strong></p>
+<ul>
+<li><strong>Strict Mode</strong>: All-or-nothing processing with pre-validation</li>
+<li><strong>Tolerant Mode</strong>: Partial success with configurable error thresholds</li>
+<li><strong>Batch Processing</strong>: Efficient bulk operations with transaction management</li>
+</ul>
+<h3 id="shell-script-wrapper-run-file-to-sql-loadersh">Shell Script Wrapper (<code>run-file-to-sql-loader.sh</code>)</h3>
+<h4 id="core-responsibilities">Core Responsibilities</h4>
+<p><strong>Environment Management:</strong></p>
+<ul>
+<li>Automatically creates and manages Python virtual environments</li>
+<li>Installs required packages from requirements.txt</li>
+<li>Handles cross-platform compatibility (Unix/Linux/Windows)</li>
+</ul>
+<p><strong>Validation and Setup:</strong></p>
+<ul>
+<li>Validates input paths, configuration files, and processing modes</li>
+<li>Verifies Python installation and required packages</li>
+<li>Ensures YAML configuration files are syntactically correct</li>
+</ul>
+<p><strong>Execution Management:</strong></p>
+<ul>
+<li>Provides comprehensive CLI with help and usage information</li>
+<li>Manages execution errors and provides meaningful feedback</li>
+<li>Supports verbose logging and colored output for better user experience</li>
+</ul>
+<h2 id="data-flow-architecture">Data Flow Architecture</h2>
+<h3 id="input-processing-pipeline">Input Processing Pipeline</h3>
+<ol>
+<li><strong>File Discovery</strong>: System identifies input files (single file or directory batch)</li>
+<li><strong>File Type Detection</strong>: Automatic detection of CSV, PSV, or JSON format</li>
+<li><strong>Data Loading</strong>: Files loaded into pandas DataFrames for processing</li>
+<li><strong>Schema Analysis</strong>: Column types, lengths, and constraints inferred from data</li>
+<li><strong>DDL Generation</strong>: SQL Server table definitions created based on schema</li>
+<li><strong>Table Management</strong>: Existing tables handled per configuration (drop/recreate, append, fail)</li>
+<li><strong>Data Loading</strong>: Records inserted with configurable transaction semantics</li>
+<li><strong>Error Handling</strong>: Failed records logged and processed per error threshold settings</li>
+<li><strong>Statistics Recording</strong>: Job metrics and performance data recorded to database</li>
+</ol>
+<h3 id="processing-modes">Processing Modes</h3>
+<p><strong>Single File Mode:</strong></p>
+<ul>
+<li>Direct processing of individual files</li>
+<li>Immediate feedback and error reporting</li>
+<li>Suitable for ad-hoc data loading tasks</li>
+</ul>
+<p><strong>Directory Batch Mode:</strong></p>
+<ul>
+<li>Processes all supported files in a directory</li>
+<li>Supports checkpointing and resumption</li>
+<li>Ideal for large-scale data migration projects</li>
+<li>Maintains comprehensive batch statistics</li>
+</ul>
+<h2 id="technical-specifications">Technical Specifications</h2>
+<h3 id="supported-file-formats">Supported File Formats</h3>
+<ul>
+<li><strong>CSV</strong>: Comma-separated values with automatic delimiter detection</li>
+<li><strong>PSV</strong>: Pipe-separated values (|) with consistent column structure</li>
+<li><strong>JSON</strong>: JavaScript Object Notation with array or object structures</li>
+</ul>
+<h3 id="database-connectivity">Database Connectivity</h3>
+<ul>
+<li><strong>Primary Driver</strong>: ODBC Driver 17 for SQL Server</li>
+<li><strong>Alternative Drivers</strong>: pyodbc and pymssql for compatibility</li>
+<li><strong>Connection Features</strong>: Trusted connections, SSL support, connection pooling</li>
+</ul>
+<h3 id="data-type-mapping">Data Type Mapping</h3>
+<ul>
+<li><strong>String Data</strong>: NVARCHAR with automatic length detection and manual overrides</li>
+<li><strong>Numeric Data</strong>: INT for integers, DECIMAL(18,4) for floating-point values</li>
+<li><strong>Date/Time Data</strong>: DATETIME2 with multiple format pattern support</li>
+<li><strong>NULL Handling</strong>: Configurable NOT NULL constraints per column</li>
+</ul>
+<h3 id="performance-features">Performance Features</h3>
+<ul>
+<li><strong>Batch Processing</strong>: Configurable batch sizes for optimal memory usage</li>
+<li><strong>Checkpointing</strong>: Resume interrupted batch jobs from last successful state</li>
+<li><strong>Error Thresholds</strong>: Configurable limits to prevent runaway error conditions</li>
+<li><strong>Memory Management</strong>: Efficient DataFrame processing with sampling for large files</li>
+</ul>
+<h2 id="visual-documentation">Visual Documentation</h2>
+<h3 id="system-architecture-overview">System Architecture Overview</h3>
+<pre><code class="language-mermaid"><div class="mermaid">graph TB
+    subgraph "Input Layer"
+        CSV[CSV Files]
+        PSV[PSV Files] 
+        JSON[JSON Files]
+        DIR[Directory Batch]
+    end
+    
+    subgraph "Processing Layer"
+        SHELL[Shell Script Wrapper<br/>run-file-to-sql-loader.sh]
+        VENV[Python Virtual Environment<br/>venv/]
+        PYTHON[Python ETL Engine<br/>file-to-sql-loader.py]
+    end
+    
+    subgraph "Core Components"
+        DETECTOR[File Type Detector]
+        ANALYZER[Schema Analyzer]
+        DDL[DDL Generator]
+        LOADER[Data Loader]
+        BATCH[Batch Job Manager]
+    end
+    
+    subgraph "Configuration"
+        CONFIG[YAML Configuration<br/>loader_config.yaml]
+        REQS[Dependencies<br/>requirements.txt]
+    end
+    
+    subgraph "Database Layer"
+        SQLSERVER[(SQL Server Database)]
+        STATS[(Statistics Tables)]
+        ERROR[(Error Log Tables)]
+    end
+    
+    subgraph "Output Layer"
+        LOGS[Log Files]
+        PROCESSED[Processed Files]
+        ERRORS[Error Files]
+    end
+    
+    CSV --> SHELL
+    PSV --> SHELL
+    JSON --> SHELL
+    DIR --> SHELL
+    
+    SHELL --> VENV
+    VENV --> PYTHON
+    CONFIG --> PYTHON
+    REQS --> VENV
+    
+    PYTHON --> DETECTOR
+    DETECTOR --> ANALYZER
+    ANALYZER --> DDL
+    DDL --> LOADER
+    PYTHON --> BATCH
+    
+    LOADER --> SQLSERVER
+    BATCH --> STATS
+    LOADER --> ERROR
+    
+    PYTHON --> LOGS
+    PYTHON --> PROCESSED
+    PYTHON --> ERRORS
+    
+    style PYTHON fill:#e1f5fe
+    style SQLSERVER fill:#f3e5f5
+    style CONFIG fill:#fff3e0
+    style SHELL fill:#e8f5e8
+</div></code></pre>
+<h3 id="etl-data-processing-flow">ETL Data Processing Flow</h3>
+<pre><code class="language-mermaid"><div class="mermaid">flowchart TD
+    START([Start ETL Process]) --> INPUT{Input Type?}
+    
+    INPUT -->|Single File| SINGLE[Single File Mode]
+    INPUT -->|Directory| BATCH[Batch Processing Mode]
+    
+    SINGLE --> DETECT[Detect File Type<br/>CSV/PSV/JSON]
+    BATCH --> DISCOVER[Discover All Files<br/>in Directory]
+    
+    DISCOVER --> CHECKPOINT{Resume Existing<br/>Batch Job?}
+    CHECKPOINT -->|Yes| RESUME[Load Pending Files<br/>from Checkpoint]
+    CHECKPOINT -->|No| NEWBATCH[Create New<br/>Batch Job]
+    
+    RESUME --> FILELOOP[Process Each File]
+    NEWBATCH --> FILELOOP
+    DETECT --> FILELOOP
+    
+    FILELOOP --> LOAD[Load File into<br/>pandas DataFrame]
+    LOAD --> ANALYZE[Analyze Schema<br/>& Infer Types]
+    
+    ANALYZE --> TABLEGEN[Generate Table Name<br/>from Filename]
+    TABLEGEN --> TABLECHECK{Table Exists?}
+    
+    TABLECHECK -->|No| CREATEDDL[Generate CREATE<br/>TABLE DDL]
+    TABLECHECK -->|Yes| TABLEMODE{Table Mode?}
+    
+    TABLEMODE -->|drop_recreate| DROPTABLE[DROP TABLE]
+    TABLEMODE -->|append| INSERTDATA[Insert Data]
+    TABLEMODE -->|fail| ERROR[Fail with Error]
+    
+    DROPTABLE --> CREATEDDL
+    CREATEDDL --> CREATETABLE[Execute CREATE TABLE]
+    CREATETABLE --> INSERTDATA
+    
+    INSERTDATA --> TRANSMODE{Transaction Mode?}
+    TRANSMODE -->|strict| STRICT[All-or-Nothing<br/>Transaction]
+    TRANSMODE -->|tolerant| TOLERANT[Tolerant Transaction<br/>with Error Threshold]
+    
+    STRICT --> VALIDATE[Pre-validate<br/>All Rows]
+    VALIDATE --> VALIDOK{All Rows Valid?}
+    VALIDOK -->|Yes| BATCHINSERT[Batch Insert<br/>All Rows]
+    VALIDOK -->|No| MOVEERROR[Move File to<br/>Error Directory]
+    
+    TOLERANT --> ROWLOOP[Process Each Row]
+    ROWLOOP --> ROWINSERT{Insert Row}
+    ROWINSERT -->|Success| ROWSUCCESS[Increment Success Count]
+    ROWINSERT -->|Error| ROWERROR[Increment Error Count]
+    
+    ROWERROR --> THRESHOLD{Error Count ><br/>Threshold?}
+    THRESHOLD -->|Yes| MOVEERROR
+    THRESHOLD -->|No| CONTINUE[Continue Processing]
+    
+    ROWSUCCESS --> CONTINUE
+    CONTINUE --> MOREROWS{More Rows?}
+    MOREROWS -->|Yes| ROWLOOP
+    MOREROWS -->|No| COMMIT[Commit Transaction]
+    
+    BATCHINSERT --> COMMIT
+    COMMIT --> MOVEPROCESSED[Move File to<br/>Processed Directory]
+    
+    MOVEPROCESSED --> STATS[Record Job Statistics]
+    MOVEERROR --> ERRORSTATS[Record Error Statistics]
+    
+    STATS --> BATCHMODE{Batch Mode?}
+    ERRORSTATS --> BATCHMODE
+    ERROR --> BATCHMODE
+    
+    BATCHMODE -->|Yes| MOREFILES{More Files<br/>to Process?}
+    BATCHMODE -->|No| END([End Process])
+    
+    MOREFILES -->|Yes| FILELOOP
+    MOREFILES -->|No| BATCHSTATS[Update Batch<br/>Statistics]
+    
+    BATCHSTATS --> END
+    
+    style START fill:#c8e6c9
+    style END fill:#ffcdd2
+    style ERROR fill:#ffcdd2
+    style MOVEERROR fill:#ffcdd2
+    style COMMIT fill:#e1f5fe
+    style STATS fill:#f3e5f5
+</div></code></pre>
+<h3 id="etl-system-execution-sequence">ETL System Execution Sequence</h3>
+<pre><code class="language-mermaid"><div class="mermaid">sequenceDiagram
+    participant User
+    participant Shell as Shell Script
+    participant VEnv as Virtual Environment
+    participant Python as Python ETL Engine
+    participant FileSystem as File System
+    participant Database as SQL Server
+    participant Logger as Logging System
+
+    User->>Shell: Execute run-file-to-sql-loader.sh
+    Shell->>Shell: Parse command line arguments
+    Shell->>Shell: Validate input parameters
+
+    Shell->>VEnv: Setup/activate virtual environment
+    VEnv->>VEnv: Install dependencies from requirements.txt
+    VEnv-->>Shell: Environment ready
+
+    Shell->>Python: Launch file-to-sql-loader.py
+    Python->>FileSystem: Load YAML configuration
+    FileSystem-->>Python: Configuration loaded
+
+    Python->>Logger: Setup logging system
+    Logger->>FileSystem: Create log files
+
+    alt Single File Mode
+        Python->>FileSystem: Read input file
+        FileSystem-->>Python: File data
+        Python->>Python: Detect file type (CSV/PSV/JSON)
+        Python->>Python: Load into pandas DataFrame
+    else Directory Batch Mode
+        Python->>Database: Check for existing batch jobs
+        Database-->>Python: Batch job status
+        Python->>FileSystem: Discover all files in directory
+        FileSystem-->>Python: File list
+        loop For each file
+            Python->>FileSystem: Read file
+            FileSystem-->>Python: File data
+            Python->>Python: Detect file type
+            Python->>Python: Load into DataFrame
+        end
+    end
+
+    Python->>Python: Analyze DataFrame structure
+    Python->>Python: Infer SQL data types
+    Python->>Python: Generate table name from filename
+
+    Python->>Database: Connect to SQL Server
+    Database-->>Python: Connection established
+
+    Python->>Database: Check if target table exists
+    Database-->>Python: Table existence status
+
+    alt Table doesn't exist
+        Python->>Python: Generate CREATE TABLE DDL
+        Python->>Database: Execute CREATE TABLE
+        Database-->>Python: Table created
+    else Table exists and mode is drop_recreate
+        Python->>Database: DROP TABLE
+        Python->>Python: Generate CREATE TABLE DDL
+        Python->>Database: Execute CREATE TABLE
+        Database-->>Python: Table recreated
+    else Table exists and mode is append
+        Note over Python: Use existing table
+    end
+
+    alt Strict Transaction Mode
+        Python->>Python: Pre-validate all rows
+        alt All rows valid
+            Python->>Database: Begin transaction
+            Python->>Database: Batch insert all rows
+            Database-->>Python: Insert successful
+            Python->>Database: Commit transaction
+            Python->>FileSystem: Move file to processed directory
+        else Validation failed
+            Python->>FileSystem: Move file to error directory
+            Python->>Logger: Log validation errors
+        end
+    else Tolerant Transaction Mode
+        Python->>Database: Begin transaction
+        loop For each row
+            Python->>Database: Insert row
+            alt Insert successful
+                Database-->>Python: Success
+            else Insert failed
+                Database-->>Python: Error
+                Python->>Python: Increment error count
+                alt Error count > threshold
+                    Python->>Database: Rollback transaction
+                    Python->>FileSystem: Move file to error directory
+                    Note over Python: Exit processing loop
+                else Error count within threshold
+                    Note over Python: Continue processing
+                end
+            end
+        end
+        alt Processing completed successfully
+            Python->>Database: Commit transaction
+            Python->>FileSystem: Move file to processed directory
+        else Processing aborted due to errors
+            Note over Python: File already moved to error directory
+        end
+    end
+
+    Python->>Database: Record job statistics
+    Python->>Database: Record error logs (if any)
+    Python->>Logger: Log processing results
+
+    alt Batch Mode
+        Python->>Database: Update batch statistics
+    end
+
+    Python-->>Shell: Processing complete
+    Shell-->>User: Execution finished
+</div></code></pre>
+<h3 id="etl-system-database-schema">ETL System Database Schema</h3>
+<pre><code class="language-mermaid"><div class="mermaid">erDiagram
+    EtlJobStatistics {
+        UNIQUEIDENTIFIER JobRunID PK
+        UNIQUEIDENTIFIER BatchJobID FK
+        DATETIME2 JobStartTime
+        DATETIME2 JobEndTime
+        INT JobDurationSeconds
+        NVARCHAR(50) JobStatus
+        NVARCHAR(255) SourceFile
+        NVARCHAR(255) TargetTable
+        INT RowsRead
+        INT RowsInserted
+        INT RowsUpdated
+        INT RowsFailed
+        NVARCHAR(MAX) ErrorMessage
+    }
+
+    EtlBatchJobStatistics {
+        UNIQUEIDENTIFIER BatchJobID PK
+        NVARCHAR(MAX) DirectoryPath
+        INT TotalFiles
+        INT FilesProcessed
+        INT FilesFailed
+        DATETIME2 BatchStartTime
+        DATETIME2 BatchEndTime
+        NVARCHAR(50) BatchStatus
+        BIT IsResumed
+        UNIQUEIDENTIFIER OriginalBatchJobID
+    }
+
+    EtlJobError {
+        INT ErrorID PK
+        UNIQUEIDENTIFIER JobRunID FK
+        NVARCHAR(255) TableName
+        NVARCHAR(255) ColumnName
+        NVARCHAR(100) ErrorType
+        NVARCHAR(MAX) ErrorMessage
+        DATETIME2 ErrorTimestamp
+    }
+
+    DynamicDataTables {
+        NVARCHAR(255) TableName PK
+        NVARCHAR(MAX) DDLStatement
+        DATETIME2 CreatedDate
+        NVARCHAR(255) SourceFile
+        NVARCHAR(MAX) ColumnDefinitions
+    }
+
+    EtlBatchJobStatistics ||--o{ EtlJobStatistics : "contains"
+    EtlJobStatistics ||--o{ EtlJobError : "generates"
+    EtlJobStatistics ||--o{ DynamicDataTables : "creates"
+</div></code></pre>
+<h2 id="component-interactions">Component Interactions</h2>
+<h3 id="core-component-relationships">Core Component Relationships</h3>
+<p><strong>FileToSQLLoader ↔ BatchJobManager</strong></p>
+<ul>
+<li>BatchJobManager creates and manages FileToSQLLoader instances for each file</li>
+<li>FileToSQLLoader reports processing results back to BatchJobManager</li>
+<li>Shared database connection for efficiency and transaction coordination</li>
+</ul>
+<p><strong>Schema Analyzer ↔ DDL Generator</strong></p>
+<ul>
+<li>Schema Analyzer provides inferred data types and constraints</li>
+<li>DDL Generator creates SQL Server-compatible table definitions</li>
+<li>Supports manual overrides through configuration for disputed columns</li>
+</ul>
+<p><strong>Data Loader ↔ Error Handler</strong></p>
+<ul>
+<li>Data Loader reports row-level processing errors</li>
+<li>Error Handler tracks error counts against configurable thresholds</li>
+<li>Determines whether to continue processing or abort based on error rates</li>
+</ul>
+<h3 id="configuration-dependencies">Configuration Dependencies</h3>
+<p><strong>YAML Configuration Structure:</strong></p>
+<pre class="hljs"><code><div><span class="hljs-attr">database:</span>
+  <span class="hljs-attr">driver:</span> <span class="hljs-string">'ODBC Driver 17 for SQL Server'</span>
+  <span class="hljs-attr">server:</span> <span class="hljs-string">'localhost'</span>
+  <span class="hljs-attr">database:</span> <span class="hljs-string">'TestDB'</span>
+  <span class="hljs-attr">username:</span> <span class="hljs-string">'sa'</span>
+  <span class="hljs-attr">password:</span> <span class="hljs-string">'YourStrong@Passw0rd'</span>
+
+<span class="hljs-attr">loader:</span>
+  <span class="hljs-attr">table_mode:</span> <span class="hljs-string">'drop_recreate'</span>  <span class="hljs-comment"># 'drop_recreate', 'append', 'fail'</span>
+  <span class="hljs-attr">batch_size:</span> <span class="hljs-number">1000</span>
+  <span class="hljs-attr">max_retries:</span> <span class="hljs-number">3</span>
+  <span class="hljs-attr">max-row-errors:</span> <span class="hljs-number">100</span>
+  <span class="hljs-attr">transaction_mode:</span> <span class="hljs-string">'tolerant'</span>  <span class="hljs-comment"># 'strict' or 'tolerant'</span>
+
+<span class="hljs-attr">ddl:</span>
+  <span class="hljs-attr">not_null_columns:</span>
+    <span class="hljs-bullet">-</span> <span class="hljs-string">'createdate'</span>
+    <span class="hljs-bullet">-</span> <span class="hljs-string">'databasename'</span>
+    <span class="hljs-bullet">-</span> <span class="hljs-string">'financialclass'</span>
+
+<span class="hljs-attr">logging:</span>
+  <span class="hljs-attr">enabled:</span> <span class="hljs-literal">true</span>
+  <span class="hljs-attr">level:</span> <span class="hljs-string">'INFO'</span>
+  <span class="hljs-attr">path:</span> <span class="hljs-string">'logs'</span>
+  <span class="hljs-attr">format:</span> <span class="hljs-string">'%(asctime)s - %(name)s - %(levelname)s - %(message)s'</span>
+
+<span class="hljs-attr">job_statistics:</span>
+  <span class="hljs-attr">enabled:</span> <span class="hljs-literal">true</span>
+  <span class="hljs-attr">table_name:</span> <span class="hljs-string">'EtlJobStatistics'</span>
+
+<span class="hljs-attr">error_logging:</span>
+  <span class="hljs-attr">enabled:</span> <span class="hljs-literal">true</span>
+  <span class="hljs-attr">table_name:</span> <span class="hljs-string">'EtlJobError'</span>
+
+<span class="hljs-attr">batch_processing:</span>
+  <span class="hljs-attr">enable_checkpointing:</span> <span class="hljs-literal">true</span>
+  <span class="hljs-attr">resume_incomplete_batches:</span> <span class="hljs-literal">true</span>
+  <span class="hljs-attr">max_resume_age_hours:</span> <span class="hljs-number">24</span>
+  <span class="hljs-attr">cleanup_completed_batches:</span> <span class="hljs-literal">false</span>
+
+<span class="hljs-attr">tables:</span>
+  <span class="hljs-comment"># Manual column length overrides</span>
+  <span class="hljs-attr">your_table_name:</span>
+    <span class="hljs-attr">disputed_columns:</span>
+      <span class="hljs-attr">your_column_name:</span>
+        <span class="hljs-attr">max_length:</span> <span class="hljs-number">150</span>
+</div></code></pre>
+<h2 id="configuration-management">Configuration Management</h2>
+<h3 id="environment-configuration">Environment Configuration</h3>
+<p><strong>Virtual Environment Management:</strong></p>
+<ul>
+<li>Automatic creation of isolated Python environments</li>
+<li>Dependency installation from requirements.txt</li>
+<li>Cross-platform compatibility (Windows/Unix/Linux)</li>
+<li>Version management and conflict resolution</li>
+</ul>
+<p><strong>Dependency Management:</strong></p>
+<pre class="hljs"><code><div># Core Dependencies
+sqlalchemy&gt;=1.4.0,&lt;3.0.0
+pyodbc&gt;=4.0.0,&lt;6.0.0
+pymssql&gt;=2.2.0,&lt;3.0.0
+pandas&gt;=1.3.0,&lt;3.0.0
+pyyaml&gt;=5.4.0,&lt;7.0.0
+</div></code></pre>
+<h3 id="runtime-configuration">Runtime Configuration</h3>
+<p><strong>Command Line Interface:</strong></p>
+<pre class="hljs"><code><div><span class="hljs-comment"># Single file processing</span>
+./run-file-to-sql-loader.sh data.csv
+
+<span class="hljs-comment"># Directory batch processing</span>
+./run-file-to-sql-loader.sh /path/to/data/directory/
+
+<span class="hljs-comment"># Custom configuration</span>
+./run-file-to-sql-loader.sh data.csv --config custom_config.yaml
+
+<span class="hljs-comment"># Setup and validation</span>
+./run-file-to-sql-loader.sh --setup-only
+./run-file-to-sql-loader.sh --check-deps
+</div></code></pre>
+<p><strong>Processing Modes:</strong></p>
+<ul>
+<li><strong>Single File Mode</strong>: Direct processing of individual files</li>
+<li><strong>Directory Batch Mode</strong>: Automated processing of all files in a directory</li>
+<li><strong>Force Modes</strong>: Override automatic detection with --file or --directory flags</li>
+</ul>
+<h2 id="error-handling-and-monitoring">Error Handling and Monitoring</h2>
+<h3 id="error-classification">Error Classification</h3>
+<p><strong>File-Level Errors:</strong></p>
+<ul>
+<li>File not found or inaccessible</li>
+<li>Unsupported file format</li>
+<li>Malformed data structure</li>
+<li>Configuration errors</li>
+</ul>
+<p><strong>Row-Level Errors:</strong></p>
+<ul>
+<li>Data type conversion failures</li>
+<li>Constraint violations</li>
+<li>NULL value in NOT NULL column</li>
+<li>String length exceeding column limits</li>
+</ul>
+<p><strong>System-Level Errors:</strong></p>
+<ul>
+<li>Database connection failures</li>
+<li>Insufficient permissions</li>
+<li>Disk space limitations</li>
+<li>Memory allocation errors</li>
+</ul>
+<h3 id="monitoring-and-alerting">Monitoring and Alerting</h3>
+<p><strong>Job Statistics Tracking:</strong></p>
+<ul>
+<li>Processing start and end times</li>
+<li>Row counts (read, inserted, updated, failed)</li>
+<li>Error rates and types</li>
+<li>Performance metrics</li>
+</ul>
+<p><strong>Batch Processing Monitoring:</strong></p>
+<ul>
+<li>Overall batch progress</li>
+<li>File-level success/failure rates</li>
+<li>Checkpointing and resumption tracking</li>
+<li>Resource utilization metrics</li>
+</ul>
+<p><strong>Log Management:</strong></p>
+<ul>
+<li>Structured logging with configurable levels</li>
+<li>Separate log files per job execution</li>
+<li>Colored console output for real-time monitoring</li>
+<li>Error log aggregation and analysis</li>
+</ul>
+<h3 id="recovery-mechanisms">Recovery Mechanisms</h3>
+<p><strong>Checkpointing System:</strong></p>
+<ul>
+<li>Automatic save points during batch processing</li>
+<li>Resume capability for interrupted jobs</li>
+<li>Configurable resume age limits</li>
+<li>Duplicate processing prevention</li>
+</ul>
+<p><strong>Error Recovery:</strong></p>
+<ul>
+<li>Configurable retry mechanisms</li>
+<li>Graceful degradation with partial success</li>
+<li>Automatic file quarantine for problematic data</li>
+<li>Manual intervention points for critical errors</li>
+</ul>
+<h2 id="deployment-and-operations">Deployment and Operations</h2>
+<h3 id="system-requirements">System Requirements</h3>
+<p><strong>Software Dependencies:</strong></p>
+<ul>
+<li>Python 3.7 or higher</li>
+<li>SQL Server with ODBC Driver 17</li>
+<li>Sufficient disk space for logs and temporary files</li>
+<li>Network connectivity to target database</li>
+</ul>
+<p><strong>Hardware Recommendations:</strong></p>
+<ul>
+<li>Minimum 4GB RAM for large file processing</li>
+<li>SSD storage for optimal I/O performance</li>
+<li>Multi-core CPU for parallel processing capabilities</li>
+</ul>
+<h3 id="installation-and-setup">Installation and Setup</h3>
+<p><strong>Quick Start:</strong></p>
+<ol>
+<li>Clone or download the ETL system files</li>
+<li>Run <code>./run-file-to-sql-loader.sh --setup-only</code> to initialize environment</li>
+<li>Configure database connection in <code>src/loader_config.yaml</code></li>
+<li>Test with <code>./run-file-to-sql-loader.sh --check-deps</code></li>
+<li>Process files with <code>./run-file-to-sql-loader.sh &lt;input_path&gt;</code></li>
+</ol>
+<p><strong>Production Deployment:</strong></p>
+<ul>
+<li>Schedule batch jobs using cron or task scheduler</li>
+<li>Implement log rotation and archival policies</li>
+<li>Set up monitoring and alerting for job failures</li>
+<li>Configure backup and recovery procedures</li>
+</ul>
+<h3 id="maintenance-and-troubleshooting">Maintenance and Troubleshooting</h3>
+<p><strong>Regular Maintenance:</strong></p>
+<ul>
+<li>Monitor log file growth and implement rotation</li>
+<li>Review and optimize database statistics tables</li>
+<li>Update Python dependencies as needed</li>
+<li>Validate configuration files for syntax errors</li>
+</ul>
+<p><strong>Common Issues and Solutions:</strong></p>
+<ul>
+<li><strong>Connection Timeouts</strong>: Increase connection timeout values in configuration</li>
+<li><strong>Memory Issues</strong>: Reduce batch sizes or implement streaming processing</li>
+<li><strong>Permission Errors</strong>: Verify database user permissions and file system access</li>
+<li><strong>Data Type Conflicts</strong>: Use manual column overrides in configuration</li>
+</ul>
+<h3 id="performance-optimization">Performance Optimization</h3>
+<p><strong>Tuning Recommendations:</strong></p>
+<ul>
+<li>Adjust batch sizes based on available memory</li>
+<li>Use appropriate transaction modes for data quality requirements</li>
+<li>Implement parallel processing for large directory batches</li>
+<li>Optimize database indexes for statistics tables</li>
+</ul>
+<p><strong>Monitoring Performance:</strong></p>
+<ul>
+<li>Track processing times per file and batch</li>
+<li>Monitor memory usage during large file processing</li>
+<li>Analyze error rates and patterns</li>
+<li>Review database performance metrics</li>
+</ul>
+<h2 id="conclusion">Conclusion</h2>
+<p>The NSPC ETL System provides a robust, scalable solution for automated data ingestion from various file formats into SQL Server databases. Its comprehensive feature set, including automatic schema inference, configurable error handling, and batch processing capabilities, makes it suitable for both ad-hoc data loading tasks and large-scale production deployments.</p>
+<p>The system's modular architecture, extensive configuration options, and comprehensive monitoring capabilities ensure reliable operation while providing the flexibility needed to handle diverse data processing requirements.</p>
+<h3 id="key-benefits">Key Benefits</h3>
+<ul>
+<li><strong>Automation</strong>: Reduces manual effort in data loading processes</li>
+<li><strong>Reliability</strong>: Comprehensive error handling and recovery mechanisms</li>
+<li><strong>Scalability</strong>: Supports both single files and large batch operations</li>
+<li><strong>Monitoring</strong>: Detailed logging and statistics for operational visibility</li>
+<li><strong>Flexibility</strong>: Configurable processing modes and data type handling</li>
+<li><strong>Maintainability</strong>: Clear separation of concerns and modular design</li>
+</ul>
+
+</body>
+</html>

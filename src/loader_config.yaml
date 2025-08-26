@@ -1,0 +1,71 @@
+database:
+  driver: 'ODBC Driver 17 for SQL Server'
+  server: 'localhost'
+  database: 'TestDB'
+  username: 'sa'
+  password: 'YourStrong@Passw0rd'
+
+loader:
+  table_mode: 'drop_recreate'  # 'drop_recreate', 'append', 'fail'
+  batch_size: 1000
+  max_retries: 3
+  max-row-errors: 100
+  transaction_mode: 'tolerant'  # 'strict' for all-or-nothing, 'tolerant' for partial success
+
+ddl:
+  # All columns will be NULLABLE by default.
+  # Only list the columns here that you want to have a NOT NULL constraint.
+  not_null_columns:
+    - 'createdate'
+    - 'databasename'
+    - 'financialclass'
+    - 'payerid'
+    - 'payername'
+    - 'payertype'
+    - 'status'
+
+
+logging:
+  enabled: true
+  level: 'INFO' # Valid levels: DEBUG, INFO, WARNING, ERROR, CRITICAL
+  path: 'logs'  # Directory for log files, relative to the script's execution
+  format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+
+job_statistics:
+  enabled: true
+  table_name: 'EtlJobStatistics'
+
+error_logging:
+  enabled: true
+  table_name: 'EtlJobError'
+
+batch_processing:
+  enable_checkpointing: true
+  resume_incomplete_batches: true
+  max_resume_age_hours: 24  # Don't resume batches older than this
+  cleanup_completed_batches: false  # Keep completed batch records
+
+tables:
+  # Example of overriding column lengths for a specific table
+  your_table_name:
+    disputed_columns:
+      your_column_name:
+        max_length: 150  # Manually set the max length for this column
+
+email_notifications:
+  enabled: true  # Set to false to disable email notifications
+  smtp_server: 'smtp.gmail.com'  # SMTP server address
+  smtp_port: 587  # SMTP port (587 for TLS, 465 for SSL, 25 for non-encrypted)
+  use_tls: true  # Use TLS encryption
+  username: 'your-email@gmail.com'  # SMTP username (usually your email)
+  password: 'your-app-password'  # SMTP password or app-specific password
+  from_email: 'your-email@gmail.com'  # From email address (can be same as username)
+  to_emails:  # List of recipient email addresses
+    - 'admin@company.com'
+    - 'data-team@company.com'
+    - 'manager@company.com'
+  # Common SMTP configurations:
+  # Gmail: smtp.gmail.com:587 (TLS) or smtp.gmail.com:465 (SSL)
+  # Outlook: smtp-mail.outlook.com:587 (TLS)
+  # Yahoo: smtp.mail.yahoo.com:587 (TLS)
+  # Custom SMTP: your-smtp-server.com:587
