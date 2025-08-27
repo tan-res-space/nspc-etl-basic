@@ -1,0 +1,19 @@
+# Test-specific requirements for the NSPC ETL project
+# These are in addition to the main requirements.txt
+
+# Testing framework
+pytest>=7.0.0
+pytest-cov>=4.0.0
+pytest-mock>=3.10.0
+
+# Additional testing utilities
+freezegun>=1.2.0  # For mocking datetime in tests
+factory-boy>=3.2.0  # For creating test data
+faker>=18.0.0  # For generating fake test data
+
+# For test database connections (already in main requirements but ensuring compatibility)
+pyodbc>=4.0.35
+pymssql>=2.2.0
+sqlalchemy>=2.0.0
+pandas>=2.0.0
+pyyaml>=6.0

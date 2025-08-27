@@ -1,0 +1,46 @@
+database:
+  type: 'sqlite'  # Use SQLite for testing to avoid SQL Server dependency
+  sqlite_path: 'test_nspc_etl_data.db'
+
+loader:
+  table_mode: 'drop_recreate'  # Always recreate tables for fresh testing
+  batch_size: 1000
+  max_retries: 1  # Reduce retries for faster testing
+  max-row-errors: 10  # Lower threshold for testing
+  transaction_mode: 'tolerant'  # Allow partial success for better testing coverage
+
+ddl:
+  # Test with some NOT NULL constraints
+  not_null_columns:
+    - 'id'
+
+logging:
+  enabled: true
+  level: 'DEBUG'  # More verbose logging for testing
+  path: 'test/logs'
+  format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+
+job_statistics:
+  enabled: true
+  table_name: 'EtlJobStatistics'
+
+error_logging:
+  enabled: true
+  table_name: 'EtlJobError'
+
+batch_processing:
+  enable_checkpointing: false  # Disable for simpler testing
+  resume_incomplete_batches: false
+  max_resume_age_hours: 1
+  cleanup_completed_batches: true
+
+tables:
+  # Test configuration for specific tables
+  dates_iso_format_csv:
+    disputed_columns:
+      description:
+        max_length: 200
+
+# Disable email notifications for testing
+email_notifications:
+  enabled: false

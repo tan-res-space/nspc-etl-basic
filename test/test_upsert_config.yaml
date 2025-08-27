@@ -1,0 +1,115 @@
+database:
+  type: 'sqlserver'  # Use SQL Server for UPSERT testing
+  # SQL Server configuration - assumes local Podman instance
+  driver: 'ODBC Driver 17 for SQL Server'
+  server: 'localhost'
+  database: 'TestDB'
+  username: 'sa'
+  password: 'YourStrong@Passw0rd'
+
+loader:
+  table_mode: 'upsert'  # UPSERT mode for testing (to be implemented)
+  batch_size: 1000
+  max_retries: 3
+  max-row-errors: 100
+  transaction_mode: 'tolerant'  # Allow partial success for better testing coverage
+  # UPSERT specific configuration
+  primary_key_columns: ['id']  # Default primary key column(s) for UPSERT operations
+  upsert_strategy: 'merge'  # 'merge' or 'delete_insert'
+  conflict_resolution: 'update'  # 'update', 'ignore', or 'error'
+
+ddl:
+  # Configuration for DDL generation
+  not_null_columns:
+    - 'id'  # Primary key should be NOT NULL
+  unique_constraints:
+    - ['id']  # Primary key constraint
+  check_constraints:
+    age: 'age >= 0 AND age <= 150'  # Age validation
+    email: "email LIKE '%@%'"  # Basic email validation
+
+logging:
+  enabled: true
+  level: 'DEBUG'  # Verbose logging for UPSERT testing
+  path: 'test/logs'
+  format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+
+job_statistics:
+  enabled: true
+  table_name: 'EtlJobStatistics'
+  # UPSERT specific statistics
+  track_upsert_operations: true
+  track_rows_updated: true
+  track_rows_inserted: true
+
+error_logging:
+  enabled: true
+  table_name: 'EtlJobError'
+  # Enhanced error logging for UPSERT operations
+  log_constraint_violations: true
+  log_data_type_errors: true
+  log_upsert_conflicts: true
+
+# UPSERT specific configuration section
+upsert:
+  # Strategy for handling UPSERT operations
+  strategy: 'sql_merge'  # 'sql_merge', 'update_insert', or 'temp_table'
+  
+  # Batch processing for large UPSERT operations
+  batch_processing:
+    enabled: true
+    batch_size: 1000
+    parallel_processing: false  # Set to true for parallel UPSERT batches
+  
+  # Conflict resolution strategies
+  conflict_resolution:
+    duplicate_keys_in_source: 'last_wins'  # 'last_wins', 'first_wins', or 'error'
+    constraint_violations: 'skip_row'  # 'skip_row', 'error', or 'log_and_continue'
+  
+  # Performance optimization
+  performance:
+    use_temp_tables: true  # Use temporary tables for large UPSERT operations
+    create_indexes: true   # Create temporary indexes for better performance
+    disable_triggers: false  # Disable triggers during UPSERT (use with caution)
+  
+  # Data validation
+  validation:
+    validate_before_upsert: true  # Pre-validate data before UPSERT operations
+    strict_type_checking: true    # Enforce strict data type validation
+    null_handling: 'allow'        # 'allow', 'skip', or 'error'
+
+# Test-specific configuration
+testing:
+  cleanup_test_tables: true  # Automatically clean up test tables
+  use_transactions: true     # Use transactions for test isolation
+  timeout_seconds: 300       # Timeout for long-running UPSERT tests
+  
+  # Test data generation
+  generate_test_data: true
+  test_data_size: 1000      # Number of records for large dataset tests
+  
+  # Performance benchmarks
+  performance_benchmarks:
+    small_dataset: 10       # seconds
+    medium_dataset: 60      # seconds  
+    large_dataset: 300      # seconds
+
+# Email notifications (disabled for testing)
+email:
+  enabled: false
+
+# File processing configuration
+file_processing:
+  supported_formats: ['csv', 'json', 'psv']
+  encoding: 'utf-8'
+  date_formats:
+    - '%Y-%m-%d'
+    - '%m/%d/%Y'
+    - '%d/%m/%Y'
+    - '%Y-%m-%d %H:%M:%S'
+  
+  # Error handling for file processing
+  error_handling:
+    invalid_rows: 'log_and_skip'  # 'log_and_skip', 'error', or 'ignore'
+    encoding_errors: 'replace'    # 'replace', 'ignore', or 'strict'
+    malformed_data: 'log_and_skip'

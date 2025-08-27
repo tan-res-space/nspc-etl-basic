@@ -1,0 +1,7 @@
+id,name,email,age,department,salary,created_date,is_active
+2,Jane Smith Updated,jane.updated@example.com,26,HR,47000,2023-02-20,true
+4,Alice Brown Updated,alice.updated@example.com,29,Marketing,50000,2023-04-05,true
+6,Diana Davis Updated,diana.updated@example.com,30,HR,48000,2023-06-18,true
+16,Nathan Williams,nathan@example.com,31,IT,53000,2024-04-15,true
+17,Olivia Johnson,olivia@example.com,27,Marketing,48000,2024-05-20,true
+18,Paul Anderson,paul@example.com,35,Finance,59000,2024-06-10,true

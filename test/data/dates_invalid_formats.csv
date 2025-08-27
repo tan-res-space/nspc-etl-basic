@@ -1,0 +1,11 @@
+id,description,invalid_date,expected_behavior
+1,Invalid Month,2024-13-15,Should handle gracefully
+2,Invalid Day,2024-02-30,February doesn't have 30 days
+3,Invalid Leap Year,2023-02-29,2023 is not a leap year
+4,Wrong Format,15-03-2024,Ambiguous format
+5,Text Instead of Date,Not a date,Non-date text
+6,Empty Date,,Empty field
+7,Partial Date,2024-03,Missing day
+8,Too Many Parts,2024-03-15-extra,Extra components
+9,Wrong Separator,2024/03/15 using slash,Incorrect separator for ISO
+10,Invalid Time Format,2024-03-15 25:61:99,Invalid time components

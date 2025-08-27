@@ -1,0 +1,6 @@
+id,name,email,age,department,salary,created_date,is_active
+1,John Doe Updated,john.updated@example.com,31,IT,52000,2023-01-15,true
+3,Bob Johnson Updated,bob.updated@example.com,36,Finance,58000,2023-03-10,true
+5,Charlie Wilson Updated,charlie.updated@example.com,33,Engineering,55000,2023-05-12,true
+7,Edward Miller Updated,edward.updated@example.com,32,Finance,56000,2023-07-22,true
+9,George Martinez Updated,george.updated@example.com,34,IT,57000,2023-09-08,true

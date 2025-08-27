@@ -22,6 +22,7 @@ from typing import Dict, List, Optional, Any, Set, Tuple
 
 import pandas as pd
 import pyodbc
+import sqlite3
 import yaml
 
 logger = logging.getLogger(__name__)
@@ -65,6 +66,41 @@ def setup_logging(config: Dict[str, Any], job_run_id: uuid.UUID):
         logger.info("Logging not configured in YAML, using basic config.")
 
 
+def setup_file_specific_logging(config: Dict[str, Any], file_path: str, job_run_id: uuid.UUID):
+    """
+    Configures file-specific logging for individual file processing.
+    """
+    if not config.get('logging', {}).get('enabled', False):
+        return
+    
+    log_config = config['logging']
+    log_path = Path(log_config.get('path', 'logs'))
+    log_path.mkdir(exist_ok=True)
+    
+    # Generate log file name based on the input file
+    file_name = Path(file_path).stem
+    log_file = log_path / f"process_{file_name}_{job_run_id}.log"
+
+    # Get the root logger
+    root_logger = logging.getLogger()
+    
+    # Remove existing file handlers (keep console handler)
+    handlers_to_remove = [h for h in root_logger.handlers if isinstance(h, logging.FileHandler)]
+    for handler in handlers_to_remove:
+        root_logger.removeHandler(handler)
+        handler.close()
+
+    # Create formatter
+    formatter = logging.Formatter(log_config.get('format', '%(asctime)s - %(levelname)s - %(message)s'))
+
+    # Add new file handler for this specific file
+    file_handler = logging.FileHandler(log_file)
+    file_handler.setFormatter(formatter)
+    root_logger.addHandler(file_handler)
+
+    logger.info("File-specific logging configured. Log file: %s", log_file)
+
+
 def detect_file_type(file_path: str) -> str:
     """
     Detects the file type (csv, psv, or json) by inspecting the first few lines.
@@ -91,6 +127,14 @@ def detect_file_type(file_path: str) -> str:
             return 'psv'
         if comma_counts and all(c == comma_counts[0] for c in comma_counts) and comma_counts[0] > 0:
             return 'csv'
+
+        # Check file extension as fallback for files with headers only
+        if file_path.lower().endswith('.csv'):
+            return 'csv'
+        elif file_path.lower().endswith('.psv'):
+            return 'psv'
+        elif file_path.lower().endswith('.json'):
+            return 'json'
 
     except Exception as e:
         raise ValueError(f"Could not determine file type for {file_path}: {e}")
@@ -615,24 +659,37 @@ class FileToSQLLoader:
             logger.error("Failed to write job statistics: %s", e)
 
     def connect_to_database(self) -> bool:
-        """Establish connection to SQL Server."""
+        """Establish connection to database (SQL Server or SQLite)."""
         try:
             db_config = self.config['database']
-            conn_str = (
-                f"DRIVER={{{db_config['driver']}}};"
-                f"SERVER={db_config['server']};"
-                f"DATABASE={db_config['database']};"
-                f"UID={db_config['username']};"
-                f"PWD={db_config['password']};"
-                f"TrustServerCertificate=yes;"
-            )
+            db_type = db_config.get('type', 'sqlserver')
 
-            self.connection = pyodbc.connect(conn_str)
-            logger.info("Successfully connected to SQL Server database: %s",
-                       db_config['database'])
-            return True
+            if db_type == 'sqlite':
+                # SQLite connection
+                sqlite_path = db_config.get('sqlite_path', 'nspc_etl_data.db')
+                self.connection = sqlite3.connect(sqlite_path)
+                # Enable foreign key support and row factory for better compatibility
+                self.connection.execute("PRAGMA foreign_keys = ON")
+                self.connection.row_factory = sqlite3.Row
+                logger.info("Successfully connected to SQLite database: %s", sqlite_path)
+                return True
+            else:
+                # SQL Server connection
+                conn_str = (
+                    f"DRIVER={{{db_config['driver']}}};"
+                    f"SERVER={db_config['server']};"
+                    f"DATABASE={db_config['database']};"
+                    f"UID={db_config['username']};"
+                    f"PWD={db_config['password']};"
+                    f"TrustServerCertificate=yes;"
+                )
 
-        except pyodbc.Error as e:
+                self.connection = pyodbc.connect(conn_str)
+                logger.info("Successfully connected to SQL Server database: %s",
+                           db_config['database'])
+                return True
+
+        except (pyodbc.Error, sqlite3.Error) as e:
             logger.error("Failed to connect to database: %s", str(e))
             return False
 
@@ -720,6 +777,14 @@ class FileToSQLLoader:
 
     def _is_datetime(self, value: str) -> bool:
         """Check if value can be parsed as datetime."""
+        # Handle non-string values (NaN, None, etc.)
+        if not isinstance(value, str):
+            return False
+        
+        # Skip empty strings, whitespace, or nan strings
+        if not value.strip() or value.lower().strip() == 'nan':
+            return False
+            
         datetime_patterns = [
             '%Y-%m-%d %H:%M:%S',
             '%Y-%m-%d',
@@ -804,12 +869,23 @@ class FileToSQLLoader:
         """Generate CREATE TABLE DDL statement."""
         columns_ddl = []
         not_null_columns = self.config.get('ddl', {}).get('not_null_columns', [])
+        db_type = self.config.get('database', {}).get('type', 'sqlserver')
 
         for col, sql_type in sql_types.items():
             null_clause = "NOT NULL" if col in not_null_columns else "NULL"
-            columns_ddl.append(f"    [{col}] {sql_type} {null_clause}")
+            if db_type == 'sqlite':
+                # SQLite doesn't use square brackets for column names
+                columns_ddl.append(f"    {col} {sql_type} {null_clause}")
+            else:
+                # SQL Server uses square brackets
+                columns_ddl.append(f"    [{col}] {sql_type} {null_clause}")
 
-        ddl = f"""CREATE TABLE [{table_name}] (
+        if db_type == 'sqlite':
+            ddl = f"""CREATE TABLE {table_name} (
+{f',{chr(10)}'.join(columns_ddl)}
+);"""
+        else:
+            ddl = f"""CREATE TABLE [{table_name}] (
 {f',{chr(10)}'.join(columns_ddl)}
 );"""
 
@@ -838,12 +914,16 @@ class FileToSQLLoader:
                     cursor.execute(drop_sql)
                     self.connection.commit()
                     return False  # Table dropped, needs to be created
-                if table_mode == 'append':
+                elif table_mode == 'append':
                     logger.info("Appending to existing table: %s", table_name)
                     return True  # Table exists, don't create
-                logger.error("Table %s already exists and table_mode is 'fail'",
-                           table_name)
-                return False
+                elif table_mode == 'upsert':
+                    logger.info("UPSERT mode: Table %s exists, will perform UPSERT operations", table_name)
+                    return True  # Table exists, don't create, will UPSERT
+                else:
+                    logger.error("Table %s already exists and table_mode is 'fail'",
+                               table_name)
+                    return False
 
             return False  # Table doesn't exist
 
@@ -866,12 +946,21 @@ class FileToSQLLoader:
 
     def load_data(self, df: pd.DataFrame, table_name: str, file_path: str) -> bool:
         """Load data with configurable transaction semantics."""
+        table_mode = self.config.get('loader', {}).get('table_mode', 'drop_recreate')
         transaction_mode = self.config.get('loader', {}).get('transaction_mode', 'tolerant')
 
-        if transaction_mode == 'strict':
-            return self._load_data_strict_transaction(df, table_name, file_path)
+        # Check if this is UPSERT mode
+        if table_mode == 'upsert':
+            if transaction_mode == 'strict':
+                return self._upsert_data_strict_transaction(df, table_name, file_path)
+            else:
+                return self._upsert_data_tolerant_transaction(df, table_name, file_path)
         else:
-            return self._load_data_tolerant_transaction(df, table_name, file_path)
+            # Regular INSERT mode
+            if transaction_mode == 'strict':
+                return self._load_data_strict_transaction(df, table_name, file_path)
+            else:
+                return self._load_data_tolerant_transaction(df, table_name, file_path)
 
     def _load_data_strict_transaction(self, df: pd.DataFrame, table_name: str, file_path: str) -> bool:
         """All-or-nothing transaction: complete success or complete rollback."""
@@ -1028,27 +1117,38 @@ class FileToSQLLoader:
                 converted.append(None)
                 continue
 
+            # Ensure value is string for processing
+            val_str = str(val)
+
             try:
                 # Convert based on inferred type
                 if col_info['all_datetime']:
                     # Try to parse datetime
-                    dt_val = self._parse_datetime(val)
+                    dt_val = self._parse_datetime(val_str)
                     converted.append(dt_val)
                 elif col_info['all_integer']:
-                    converted.append(int(val))
+                    converted.append(int(val_str))
                 elif col_info['all_decimal']:
-                    converted.append(Decimal(val))
+                    converted.append(Decimal(val_str))
                 else:
-                    converted.append(val)  # Keep as string
+                    converted.append(val_str)  # Keep as string
 
             except (ValueError, InvalidOperation):
                 # If conversion fails, keep as string
-                converted.append(val)
+                converted.append(val_str)
 
         return converted
 
     def _parse_datetime(self, value: str) -> Optional[datetime]:
         """Parse datetime string."""
+        # Handle non-string values (NaN, None, etc.)
+        if not isinstance(value, str):
+            return None
+            
+        # Skip empty strings, whitespace, or nan strings
+        if not value.strip() or value.lower().strip() == 'nan':
+            return None
+            
         datetime_patterns = [
             '%Y-%m-%d %H:%M:%S',
             '%Y-%m-%d',
@@ -1065,6 +1165,205 @@ class FileToSQLLoader:
                 continue
 
         return None
+
+    def _upsert_data_strict_transaction(self, df: pd.DataFrame, table_name: str, file_path: str) -> bool:
+        """UPSERT data in strict transaction mode: all-or-nothing."""
+        source_path = Path(file_path)
+
+        try:
+            self.connection.autocommit = False
+            cursor = self.connection.cursor()
+
+            logger.info("Loading data in STRICT UPSERT transaction mode: %s", table_name)
+
+            # Pre-validate all rows before any UPSERT operations
+            validation_errors = self._validate_all_rows(df)
+            if validation_errors:
+                logger.error("Pre-validation failed for %d rows. Rejecting entire file.", len(validation_errors))
+                self._log_validation_errors(validation_errors, source_path)
+                os.rename(file_path, source_path.parent / 'error' / source_path.name)
+                return False
+
+            # Perform UPSERT operations
+            rows_inserted, rows_updated = self._perform_upsert_operations(cursor, df, table_name)
+
+            self.connection.commit()
+
+            # Move to processed directory
+            os.rename(file_path, source_path.parent / 'processed' / source_path.name)
+            self.processed_rows = rows_inserted + rows_updated
+            self.error_rows = 0
+
+            logger.info("Successfully UPSERTED all %d rows in strict transaction mode (%d inserted, %d updated)",
+                       len(df), rows_inserted, rows_updated)
+            return True
+
+        except Exception as e:
+            logger.error("Strict UPSERT transaction failed: %s", str(e))
+            self.connection.rollback()
+            os.rename(file_path, source_path.parent / 'error' / source_path.name)
+            return False
+        finally:
+            self.connection.autocommit = True
+
+    def _upsert_data_tolerant_transaction(self, df: pd.DataFrame, table_name: str, file_path: str) -> bool:
+        """UPSERT data in tolerant transaction mode: allows partial success."""
+        successful_rows = 0
+        failed_rows = 0
+        failed_row_data = []
+        source_path = Path(file_path)
+        rows_inserted = 0
+        rows_updated = 0
+
+        try:
+            self.connection.autocommit = False
+            cursor = self.connection.cursor()
+
+            logger.info("Loading data in TOLERANT UPSERT transaction mode: %s", table_name)
+
+            # Get primary key columns from configuration
+            primary_key_cols = self.config.get('loader', {}).get('primary_key_columns', ['id'])
+
+            for index, row in df.iterrows():
+                try:
+                    # Perform individual UPSERT operation
+                    inserted, updated = self._perform_single_upsert(cursor, row, table_name, primary_key_cols)
+                    if inserted:
+                        rows_inserted += 1
+                    elif updated:
+                        rows_updated += 1
+                    successful_rows += 1
+                except pyodbc.Error as e:
+                    failed_rows += 1
+                    failed_row_data.append(row.to_dict())
+                    logger.warning("Error upserting row %d: %s", index, str(e))
+                    if failed_rows > self.max_row_errors:
+                        break
+
+            if failed_rows > self.max_row_errors:
+                self.connection.rollback()
+                logger.critical("File %s rejected: Exceeded max-row-errors threshold (%d > %d).",
+                               source_path.name, failed_rows, self.max_row_errors)
+                os.rename(file_path, source_path.parent / 'error' / source_path.name)
+                return False
+            else:
+                self.connection.commit()
+                os.rename(file_path, source_path.parent / 'processed' / source_path.name)
+                if failed_rows > 0:
+                    log_file = source_path.parent / 'logs' / f"{source_path.stem}_{self.job_run_id}.txt"
+                    with open(log_file, 'w') as f:
+                        for item in failed_row_data:
+                            f.write(f"{item}\n")
+
+                self.processed_rows = successful_rows
+                self.error_rows = failed_rows
+
+                logger.info("Successfully UPSERTED %d rows in tolerant transaction mode (%d inserted, %d updated, %d failed)",
+                           successful_rows, rows_inserted, rows_updated, failed_rows)
+                return True
+
+        except pyodbc.Error as e:
+            logger.error("Error during UPSERT operations: %s", str(e))
+            self.connection.rollback()
+            return False
+        finally:
+            self.connection.autocommit = True
+
+    def _perform_upsert_operations(self, cursor, df: pd.DataFrame, table_name: str) -> Tuple[int, int]:
+        """Perform batch UPSERT operations using SQL MERGE statement."""
+        primary_key_cols = self.config.get('loader', {}).get('primary_key_columns', ['id'])
+        columns = list(self.columns_info.keys())
+
+        rows_inserted = 0
+        rows_updated = 0
+
+        # Use SQL MERGE for efficient UPSERT
+        merge_sql = self._generate_merge_sql(table_name, columns, primary_key_cols)
+
+        for _, row in df.iterrows():
+            values = [row[col] for col in columns]
+            converted_values = self._convert_values(values, columns)
+
+            # Execute MERGE and get result
+            cursor.execute(merge_sql, tuple(converted_values))
+
+            # Check if row was inserted or updated (SQL Server specific)
+            cursor.execute("SELECT @@ROWCOUNT")
+            affected_rows = cursor.fetchone()[0]
+
+            if affected_rows > 0:
+                # For simplicity, we'll count all as updates in batch mode
+                # In a real implementation, you'd track this more precisely
+                rows_updated += 1
+
+        return rows_inserted, rows_updated
+
+    def _perform_single_upsert(self, cursor, row: pd.Series, table_name: str, primary_key_cols: List[str]) -> Tuple[bool, bool]:
+        """Perform single row UPSERT operation. Returns (inserted, updated)."""
+        columns = list(self.columns_info.keys())
+        values = [row[col] for col in columns]
+        converted_values = self._convert_values(values, columns)
+
+        # First, try to update existing record
+        where_clause = ' AND '.join([f"[{col}] = ?" for col in primary_key_cols])
+        set_clause = ', '.join([f"[{col}] = ?" for col in columns if col not in primary_key_cols])
+
+        if set_clause:  # Only update if there are non-primary key columns
+            update_sql = f"UPDATE [{table_name}] SET {set_clause} WHERE {where_clause}"
+
+            # Prepare values: non-PK values for SET, then PK values for WHERE
+            update_values = []
+            pk_values = []
+
+            for col, val in zip(columns, converted_values):
+                if col not in primary_key_cols:
+                    update_values.append(val)
+                else:
+                    pk_values.append(val)
+
+            cursor.execute(update_sql, tuple(update_values + pk_values))
+
+            if cursor.rowcount > 0:
+                return False, True  # Updated existing record
+
+        # If no rows were updated, insert new record
+        placeholders = ', '.join(['?' for _ in columns])
+        insert_sql = f"INSERT INTO [{table_name}] ([{'], ['.join(columns)}]) VALUES ({placeholders})"
+
+        try:
+            cursor.execute(insert_sql, tuple(converted_values))
+            return True, False  # Inserted new record
+        except pyodbc.IntegrityError:
+            # Handle race condition where record was inserted between UPDATE and INSERT
+            return False, False  # Neither inserted nor updated
+
+    def _generate_merge_sql(self, table_name: str, columns: List[str], primary_key_cols: List[str]) -> str:
+        """Generate SQL MERGE statement for UPSERT operations."""
+        # Create source values clause
+        source_values = ', '.join([f"? AS [{col}]" for col in columns])
+
+        # Create join condition on primary keys
+        join_conditions = ' AND '.join([f"target.[{col}] = source.[{col}]" for col in primary_key_cols])
+
+        # Create update set clause (exclude primary keys)
+        update_sets = ', '.join([f"[{col}] = source.[{col}]" for col in columns if col not in primary_key_cols])
+
+        # Create insert columns and values
+        insert_columns = ', '.join([f"[{col}]" for col in columns])
+        insert_values = ', '.join([f"source.[{col}]" for col in columns])
+
+        merge_sql = f"""
+        MERGE [{table_name}] AS target
+        USING (SELECT {source_values}) AS source
+        ON {join_conditions}
+        WHEN MATCHED THEN
+            UPDATE SET {update_sets}
+        WHEN NOT MATCHED THEN
+            INSERT ({insert_columns})
+            VALUES ({insert_values});
+        """
+
+        return merge_sql
 
     def write_failed_statistics(self, file_path: str, error_message: str):
         """Writes a 'Failed' status to EtlJobStatistics for a file that could not be processed."""
@@ -1086,8 +1385,14 @@ class FileToSQLLoader:
 
     def process_file(self, file_path: str, batch_job_id: Optional[str] = None) -> bool:
         """Main method to process a file."""
+        self.job_start_time = datetime.utcnow()
         self.job_run_id = self.config.get("job_run_id")
         self.batch_job_id = batch_job_id
+
+        # Setup file-specific logging
+        if self.job_run_id:
+            setup_file_specific_logging(self.config, file_path, self.job_run_id)
+
         logger.info("Starting to process file: %s", file_path)
 
         if not os.path.exists(file_path):
@@ -1102,22 +1407,41 @@ class FileToSQLLoader:
         logger.info("Detected file type: %s", file_type)
 
         # Read file into DataFrame
-        if file_type == 'json':
-            df = pd.read_json(file_path)
-        elif file_type == 'csv':
-            df = pd.read_csv(file_path)
-        elif file_type == 'psv':
-            df = pd.read_csv(file_path, sep='|')
-        else:
-            logger.error("Unsupported file type: %s", file_type)
-            return False
+        try:
+            if file_type == 'json':
+                df = pd.read_json(file_path)
+            elif file_type == 'csv':
+                df = pd.read_csv(file_path)
+            elif file_type == 'psv':
+                df = pd.read_csv(file_path, sep='|')
+            else:
+                logger.error("Unsupported file type: %s", file_type)
+                return False
+        except pd.errors.EmptyDataError:
+            logger.info("File is empty (no data rows): %s", file_path)
+            # For UPSERT mode, empty files are valid - they just don't change anything
+            table_mode = self.config.get('loader', {}).get('table_mode', 'drop_recreate')
+            if table_mode == 'upsert':
+                logger.info("Empty file in UPSERT mode - no changes to make")
+                # Move to processed directory
+                source_path = Path(file_path)
+                os.rename(file_path, source_path.parent / 'processed' / source_path.name)
+                return True
+            else:
+                logger.error("Empty file not supported in non-UPSERT mode")
+                return False
 
         # Connect to database
         if not self.connection and not self.connect_to_database():
             return False
 
         # Generate table name
-        self.table_name = self.generate_table_name(file_path)
+        # In UPSERT mode, allow override of table name for testing
+        override_table_name = self.config.get('loader', {}).get('override_table_name')
+        if override_table_name:
+            self.table_name = override_table_name
+        else:
+            self.table_name = self.generate_table_name(file_path)
         logger.info("Target table: %s", self.table_name)
 
         # Analyze file structure
@@ -1146,6 +1470,33 @@ class FileToSQLLoader:
         logger.info("Total rows: %d, Processed: %d, Errors: %d",
                    self.total_rows, self.processed_rows, self.error_rows)
 
+        # Write job statistics
+        end_time = datetime.utcnow()
+        start_time = getattr(self, 'job_start_time', end_time)
+        duration = (end_time - start_time).total_seconds()
+
+        table_mode = self.config.get('loader', {}).get('table_mode', 'drop_recreate')
+
+        # Generate unique JobRunID for each file processing
+        file_job_run_id = str(uuid.uuid4())
+
+        stats = {
+            "JobRunID": file_job_run_id,
+            "JobStartTime": start_time,
+            "JobEndTime": end_time,
+            "JobDurationSeconds": duration,
+            "JobStatus": "Success",
+            "SourceFile": file_path,
+            "TargetTable": self.table_name,
+            "RowsRead": self.total_rows,
+            "RowsInserted": self.processed_rows if table_mode != 'upsert' else 0,
+            "RowsUpdated": 0 if table_mode != 'upsert' else self.processed_rows,
+            "RowsFailed": self.error_rows,
+            "ErrorMessage": None,
+        }
+
+        self.write_statistics(stats)
+
         return True
 
 
@@ -1159,6 +1510,8 @@ def main():
 
     config = load_config(args.config)
     job_run_id = uuid.uuid4()
+    # Add job_run_id to config for access by FileToSQLLoader instances
+    config['job_run_id'] = job_run_id
     setup_logging(config, job_run_id)
 
     if os.path.isdir(args.input_path):

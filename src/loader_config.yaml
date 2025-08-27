@@ -1,16 +1,20 @@
 database:
+  type: 'sqlserver'  # 'sqlserver' or 'sqlite'
+  # SQL Server configuration (when type is 'sqlserver')
   driver: 'ODBC Driver 17 for SQL Server'
   server: 'localhost'
   database: 'TestDB'
   username: 'sa'
   password: 'YourStrong@Passw0rd'
+  # SQLite configuration (when type is 'sqlite')
+  sqlite_path: 'nspc_etl_data.db'
 
 loader:
   table_mode: 'drop_recreate'  # 'drop_recreate', 'append', 'fail'
   batch_size: 1000
   max_retries: 3
   max-row-errors: 100
-  transaction_mode: 'tolerant'  # 'strict' for all-or-nothing, 'tolerant' for partial success
+  transaction_mode: 'strict'  # 'strict' for all-or-nothing, 'tolerant' for partial success
 
 ddl:
   # All columns will be NULLABLE by default.

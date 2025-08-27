@@ -1,0 +1,42 @@
+[
+  {
+    "id": 1,
+    "name": "John JSON Updated",
+    "email": "john.json@example.com",
+    "age": 31,
+    "department": "IT",
+    "salary": 52000,
+    "created_date": "2023-01-15",
+    "is_active": true
+  },
+  {
+    "id": 2,
+    "name": "Jane JSON Updated",
+    "email": "jane.json@example.com",
+    "age": 26,
+    "department": "HR",
+    "salary": 47000,
+    "created_date": "2023-02-20",
+    "is_active": true
+  },
+  {
+    "id": 27,
+    "name": "New JSON User",
+    "email": "new.json@example.com",
+    "age": 30,
+    "department": "Engineering",
+    "salary": 55000,
+    "created_date": "2024-11-15",
+    "is_active": true
+  },
+  {
+    "id": 28,
+    "name": "Another JSON User",
+    "email": "another.json@example.com",
+    "age": 28,
+    "department": "Marketing",
+    "salary": 49000,
+    "created_date": "2024-12-01",
+    "is_active": true
+  }
+]

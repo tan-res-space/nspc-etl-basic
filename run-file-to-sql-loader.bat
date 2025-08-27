@@ -455,10 +455,10 @@ if exist "%input_path%\*" (
     for %%f in ("%input_path%") do set "extension=%%~xf"
     set "extension=!extension:~1!"
 
-    REM Convert to lowercase for comparison
-    for %%i in (A B C D E F G H I J K L M N O P Q R S T U V W X Y Z) do call set "extension=%%extension:%%i=%%i%%"
-    for %%i in (a b c d e f g h i j k l m n o p q r s t u v w x y z) do call set "extension=%%extension:%%i=%%i%%"
+    REM Convert to lowercase for comparison (Windows batch doesn't have a simple tr equivalent)
+    REM Using case-insensitive comparison instead
 
+    REM Check supported extensions (case-insensitive)
     if /i "!extension!"=="csv" goto valid_extension
     if /i "!extension!"=="psv" goto valid_extension
     if /i "!extension!"=="json" goto valid_extension
